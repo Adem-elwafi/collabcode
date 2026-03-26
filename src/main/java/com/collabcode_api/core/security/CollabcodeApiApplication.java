@@ -1,4 +1,4 @@
-package com.collabcode_api;
+package com.collabcode_api.core.security;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
