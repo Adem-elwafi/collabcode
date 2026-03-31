@@ -1,4 +1,0 @@
-0000000000000000000000000000000000000000 c70799161270f4a8e34b52ed228649a709da0d81 Adem-elwafi <adem.elwafi.dev@gmail.com> 1774709945 +0100	branch: Created from HEAD
-c70799161270f4a8e34b52ed228649a709da0d81 9a6c350e63958031d6599180bc4fc63c66b7bcc0 Adem-elwafi <adem.elwafi.dev@gmail.com> 1774710075 +0100	commit: feat(room):implement Room entitiy with UUID and Secure RoomService
-9a6c350e63958031d6599180bc4fc63c66b7bcc0 11e23a2a3eec2be567d43a501d3742524bbe8d7e Adem-elwafi <adem.elwafi.dev@gmail.com> 1774726296 +0100	commit: feat(ws): configure STOMP over StockJS with JWT interceptor for secure real-time sync
-11e23a2a3eec2be567d43a501d3742524bbe8d7e c37a662063cc4b4761f96c6481ac48f174ccb37f Adem-elwafi <adem.elwafi.dev@gmail.com> 1774784239 +0100	commit: feat(editor): implement EditorController for real-time code sync and presence
