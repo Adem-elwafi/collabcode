@@ -1,27 +1,40 @@
 import SockJS from 'sockjs-client';
-import Stomp from 'stompjs';
-import type { Client, Message, Subscription } from 'stompjs';
+import { Client } from '@stomp/stompjs';
+import type { IMessage, StompSubscription } from '@stomp/stompjs';
+
+export interface SocketMessage {
+  type: 'CODE_UPDATE';
+  content: string;
+  sender: string;
+}
 
 class WebSocketService {
   private stompClient: Client | null = null;
-  private subscription: Subscription | null = null;
+  private subscription: StompSubscription | null = null;
   private onMessageReceived: ((payload: unknown) => void) | null = null;
 
   connect(jwtToken: string, onMessageReceived: (payload: unknown) => void) {
+    this.disconnect();
     this.onMessageReceived = onMessageReceived;
 
-    const socket = new SockJS('http://localhost:8080/ws');
-    this.stompClient = Stomp.over(socket);
-
-    const headers = {
-      Authorization: `Bearer ${jwtToken}`,
-    };
-
-    this.stompClient.connect(headers, () => {
-      console.log('Connected to WebSocket');
-    }, (error) => {
-      console.error('WebSocket Error:', error);
+    this.stompClient = new Client({
+      webSocketFactory: () => new SockJS('http://localhost:8080/ws'),
+      connectHeaders: {
+        Authorization: `Bearer ${jwtToken}`,
+      },
+      reconnectDelay: 5000,
+      onConnect: () => {
+        console.log('Connected to WebSocket');
+      },
+      onStompError: (frame) => {
+        console.error('Broker reported error:', frame.headers['message']);
+      },
+      onWebSocketError: (event) => {
+        console.error('WebSocket Error:', event);
+      },
     });
+
+    this.stompClient.activate();
   }
 
   subscribeToRoom(roomId: string, callback?: (message: unknown) => void) {
@@ -32,7 +45,7 @@ class WebSocketService {
 
       this.subscription = this.stompClient.subscribe(
         `/topic/room/${roomId}`,
-        (message: Message) => {
+        (message: IMessage) => {
           const payload: unknown = JSON.parse(message.body);
           handler(payload);
         }
@@ -44,20 +57,21 @@ class WebSocketService {
     if (this.stompClient && this.stompClient.connected) {
       const message = {
         type: 'CODE_UPDATE',
-        content: content,
+        content,
         sender: 'User', // You can pull this from JWT/Auth context
       };
-      this.stompClient.send(
-        `/app/editor.sendMessage/${roomId}`,
-        {},
-        JSON.stringify(message)
-      );
+      this.stompClient.publish({
+        destination: `/app/editor.sendMessage/${roomId}`,
+        body: JSON.stringify(message),
+      });
     }
   }
 
   disconnect() {
     if (this.subscription) this.subscription.unsubscribe();
-    if (this.stompClient) this.stompClient.disconnect(() => {});
+    if (this.stompClient) {
+      void this.stompClient.deactivate();
+    }
     this.subscription = null;
     this.stompClient = null;
     this.onMessageReceived = null;

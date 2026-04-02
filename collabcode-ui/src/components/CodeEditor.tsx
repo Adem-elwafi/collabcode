@@ -2,43 +2,56 @@ import React, { useEffect, useRef, useState } from 'react';
 import Editor from '@monaco-editor/react';
 import type { OnChange } from '@monaco-editor/react';
 import WebSocketService from '../services/WebSocketService';
-
+import type { SocketMessage } from '../services/WebSocketService';
+// ...existing code...
 interface Props {
   roomId: string;
   token: string;
 }
 
-interface CodeUpdatePayload {
-  type: 'CODE_UPDATE';
-  content: string;
-}
-
-function isCodeUpdatePayload(payload: unknown): payload is CodeUpdatePayload {
+function isCodeUpdatePayload(payload: unknown): payload is SocketMessage {
   if (typeof payload !== 'object' || payload === null) {
     return false;
   }
 
-  const maybePayload = payload as { type?: unknown; content?: unknown };
-  return maybePayload.type === 'CODE_UPDATE' && typeof maybePayload.content === 'string';
+  if (!('type' in payload) || !('content' in payload) || !('sender' in payload)) {
+    return false;
+  }
+
+  const candidate = payload as {
+    type: unknown;
+    content: unknown;
+    sender: unknown;
+  };
+
+  return (
+    candidate.type === 'CODE_UPDATE' &&
+    typeof candidate.content === 'string' &&
+    typeof candidate.sender === 'string'
+  );
 }
 
 const CodeEditor: React.FC<Props> = ({ roomId, token }) => {
   const [code, setCode] = useState<string>('// Start collaborating...');
   const lastReceivedCode = useRef<string>('');
+  // Use a ref for the editor instance to avoid unnecessary re-renders
+  const editorRef = useRef<unknown>(null);
 
   useEffect(() => {
-    // 1. Connect and Subscribe
+    // 1. Establish Connection
     WebSocketService.connect(token, () => {});
 
-    // Small delay to ensure connection is established before subscribing
+    // 2. Subscribe with a small delay to ensure connection is ready
     const timeout = setTimeout(() => {
       WebSocketService.subscribeToRoom(roomId, (payload) => {
-        if (isCodeUpdatePayload(payload) && payload.content !== lastReceivedCode.current) {
-          lastReceivedCode.current = payload.content;
-          setCode(payload.content);
+        if (isCodeUpdatePayload(payload)) {
+          if (payload.content !== lastReceivedCode.current) {
+            lastReceivedCode.current = payload.content;
+            setCode(payload.content);
+          }
         }
       });
-    }, 1000);
+    }, 500);
 
     return () => {
       clearTimeout(timeout);
@@ -48,8 +61,6 @@ const CodeEditor: React.FC<Props> = ({ roomId, token }) => {
 
   const handleEditorChange: OnChange = (value) => {
     const newCode = value || '';
-    
-    // Only send if the change didn't come from the server
     if (newCode !== lastReceivedCode.current) {
       lastReceivedCode.current = newCode;
       WebSocketService.sendCodeUpdate(roomId, newCode);
@@ -58,17 +69,21 @@ const CodeEditor: React.FC<Props> = ({ roomId, token }) => {
   };
 
   return (
-    <div style={{ height: '90vh', border: '1px solid #444' }}>
+    <div style={{ height: '90vh', width: '100%', border: '1px solid #444' }}>
       <Editor
         height="100%"
         defaultLanguage="javascript"
         theme="vs-dark"
         value={code}
         onChange={handleEditorChange}
+        onMount={(editor) => {
+          editorRef.current = editor;
+        }}
         options={{
           automaticLayout: true,
           fontSize: 14,
           minimap: { enabled: false },
+          scrollBeyondLastLine: false,
         }}
       />
     </div>
