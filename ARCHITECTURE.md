@@ -87,3 +87,18 @@ This document serves as the structural map for the CollabCode backend. It explai
 - **Routing:** Uses STOMP `@MessageMapping` to separate incoming data from outgoing broadcasts.
 - **Isolation:** Employs `@DestinationVariable` to ensure messages are only broadcast to the specific `roomId` they belong to.
 - **Presence:** Manages `JOIN` events by attaching user metadata to the WebSocket session, enabling "User X has joined" notifications.
+### 🛡️ Frontend Type Safety & Lifecycle
+**The Robust Client.**
+- **Type Guards:** Uses `isCodeUpdatePayload` to validate WebSocket packets at runtime before they touch the React state.
+- **Dependency Management:** Migrated to `@stomp/stompjs` Client API for better lifecycle control (`activate/deactivate`).
+- **Memory Safety:** Explicitly resets subscriptions and STOMP references on `disconnect()` to prevent memory leaks and "Ghost" listeners.
+### 🗄️ Phase 4: Persistence & Data Hydration
+**The Hybrid Storage Model.**
+- **Storage:** Uses `@Lob` and `LONGTEXT` in the `SourceFile` entity to support large codebases within MySQL.
+- **Performance:** Implemented `@Async` background saving to decouple real-time broadcasting from database I/O, preventing "Keystroke Lag".
+- **Hydration:** Provides a RESTful "Initial State" endpoint (`GET /api/v1/rooms/{roomId}/files`) to sync the frontend state upon room entry.
+### 🧹 Phase 5: Presence & Session Lifecycle
+**The Cleanup Engine.**
+- **Event Handling:** Utilizes `WebSocketEventListener` to monitor low-level socket terminations (Disconnects).
+- **Metadata Recovery:** Extracts `username` and `roomId` from `SimpMessageHeaderAccessor` to identify which user left which room.
+- **UI Synchronization:** Automatically broadcasts `LEAVE` events to remaining collaborators to prevent "Ghost User" artifacts in the frontend.
