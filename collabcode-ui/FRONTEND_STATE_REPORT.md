@@ -1,6 +1,6 @@
 # Frontend State Report
 
-Date: 2026-04-09
+Date: 2026-04-10
 
 ## Overview
 
@@ -21,7 +21,7 @@ The visual direction is a dark, modern interface with glassmorphism treatment on
 
 ### 1. Entry Gate
 
-The app now renders a join screen before the workspace mounts.
+The app now renders a join screen before the workspace mounts and can hydrate a room from the browser URL.
 
 The join screen collects:
 
@@ -29,6 +29,8 @@ The join screen collects:
 - Room ID
 
 When the user clicks Join Workspace, the app switches into a short loading state before revealing the editor workspace. This keeps the interaction responsive without requiring a separate motion library.
+
+If the URL contains `?room=XYZ`, the room field is prefilled from that query parameter so shared links can open directly into the same room.
 
 ### 2. Join State and Persistence
 
@@ -43,7 +45,7 @@ The top-level app state now includes:
 
 Username persistence is handled through `localStorage` using the key `collabcode.username`. The stored username is restored on refresh, so the user does not need to re-enter it every time.
 
-Room ID is currently kept in component state only and is not persisted.
+Room ID is kept in component state for the active session, but it now hydrates from the `room` query parameter and is cleared on Leave Room.
 
 ### 3. Workspace Mounting
 
@@ -103,6 +105,7 @@ The sidebar shows:
 
 - Current room ID
 - Share button for the room URL
+- Leave Room button
 - Active users list
 
 ### `UserList.tsx`
@@ -128,6 +131,8 @@ Current responsibilities:
 - Publish editor updates
 - Cleanly disconnect and unsubscribe on teardown
 
+Outbound editor payloads now use the active `currentUser` as the sender instead of a hardcoded placeholder.
+
 ## Visual Design State
 
 The current styling is intentionally darker and more atmospheric than the original shell.
@@ -149,8 +154,6 @@ What is persisted:
 - Username in `localStorage`
 
 What is not persisted yet:
-
-- Room ID
 - Join/session state across refreshes
 - JWT token source
 
@@ -171,11 +174,9 @@ The frontend was validated with a successful production build:
 These are the main follow-up items if the frontend is meant to become production-ready:
 
 - The JWT token is still hardcoded in `App.tsx`
-- The room ID is not yet hydrated from the share URL query string
-- The sender value in outbound code updates is still a placeholder in `WebSocketService.ts`
 - The loading delay is fixed rather than tied to actual websocket connection readiness
-- There is no explicit logout/leave flow yet
+- Join/session state is still not restored across refreshes
 
 ## Summary
 
-The frontend is now structured around a proper entry portal, persistent username capture, and a cleaner handoff into the collaborative workspace. The current implementation is stable and compiles successfully, but it still contains a few placeholder assumptions around authentication and room hydration that should be addressed before release.
+The frontend is now structured around a proper entry portal, persistent username capture, URL-aware room hydration, and a cleaner handoff into the collaborative workspace. The current implementation is stable and compiles successfully, with the main remaining placeholder being the hardcoded JWT token source.
